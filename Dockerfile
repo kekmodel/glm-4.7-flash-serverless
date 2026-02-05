@@ -4,10 +4,11 @@ FROM lmsysorg/sglang:latest
 ENV HF_HOME=/runpod-volume/huggingface
 
 # Upgrade to GLM-4.7 supported versions
-RUN pip install uv && \
-    uv pip install --system sglang==0.3.2.dev9039+pr-17247.g90c446848 \
+RUN pip install --break-system-packages \
+    sglang==0.3.2.dev9039+pr-17247.g90c446848 \
     --extra-index-url https://sgl-project.github.io/whl/pr/ && \
-    uv pip install --system git+https://github.com/huggingface/transformers.git@76732b4e7120808ff989edbd16401f61fa6a0afa
+    pip install --break-system-packages \
+    git+https://github.com/huggingface/transformers.git@76732b4e7120808ff989edbd16401f61fa6a0afa
 
 EXPOSE 8000
 
