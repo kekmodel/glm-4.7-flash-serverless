@@ -30,13 +30,7 @@ async def async_handler(job):
         openai_url = f"{engine.base_url}{openai_route}"
         headers = {"Content-Type": "application/json"}
 
-        # GET endpoints
-        if openai_route in ["/v1/models", "/health", "/get_model_info"]:
-            response = requests.get(openai_url, timeout=30)
-            yield response.json()
-            return
-
-        # POST endpoints
+        # All routes use POST (SGLang convention)
         response = requests.post(openai_url, headers=headers, json=openai_input)
 
         if openai_input.get("stream", False):
