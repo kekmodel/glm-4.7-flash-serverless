@@ -1,86 +1,92 @@
 """
 RunPod Serverless Handler for GLM-4.7-Flash via SGLang
+Based on runpod-workers/worker-sglang
 """
-import runpod
 import requests
+import runpod
+import os
+from engine import SGlangEngine
 
-SGLANG_URL = "http://localhost:8000"
+# Initialize the engine
+engine = SGlangEngine()
+engine.start_server()
+engine.wait_for_server()
 
 
-def handler(job):
-    """
-    RunPod serverless handler.
-    Forwards requests to local SGLang server.
-    """
-    job_input = job.get("input", {})
+def get_max_concurrency(default=300):
+    """Returns the maximum concurrency value."""
+    return int(os.getenv("MAX_CONCURRENCY", default))
 
-    try:
-        # OpenAI-compatible route
-        if "openai_route" in job_input:
-            route = job_input["openai_route"]
-            payload = job_input.get("openai_input", {})
 
-            # GET endpoints
-            if route in ["/v1/models", "/health", "/get_model_info"]:
-                response = requests.get(f"{SGLANG_URL}{route}", timeout=30)
-                return response.json()
+async def async_handler(job):
+    """Handle the requests asynchronously with streaming support."""
+    job_input = job["input"]
 
-            # POST endpoints
-            response = requests.post(
-                f"{SGLANG_URL}{route}",
-                json=payload,
-                timeout=300
-            )
-            return response.json()
+    # Case 1: OpenAI style payload with route specified
+    if job_input.get("openai_route"):
+        openai_route = job_input.get("openai_route")
+        openai_input = job_input.get("openai_input", {})
 
-        # Direct chat completion
-        if "messages" in job_input:
-            payload = {
-                "model": job_input.get("model", "glm-4.7-flash"),
-                "messages": job_input["messages"],
-                "max_tokens": job_input.get("max_tokens", 2048),
-                "temperature": job_input.get("temperature", 1.0),
-                "top_p": job_input.get("top_p", 0.95),
+        openai_url = f"{engine.base_url}{openai_route}"
+        headers = {"Content-Type": "application/json"}
+
+        # GET endpoints
+        if openai_route in ["/v1/models", "/health", "/get_model_info"]:
+            response = requests.get(openai_url, timeout=30)
+            yield response.json()
+            return
+
+        # POST endpoints
+        response = requests.post(openai_url, headers=headers, json=openai_input)
+
+        if openai_input.get("stream", False):
+            for chunk in response.iter_lines():
+                if chunk:
+                    yield chunk.decode("utf-8")
+        else:
+            for chunk in response.iter_lines():
+                if chunk:
+                    yield chunk.decode("utf-8")
+
+    # Case 2: Direct chat completions (messages format)
+    elif "messages" in job_input:
+        openai_url = f"{engine.base_url}/v1/chat/completions"
+        headers = {"Content-Type": "application/json"}
+
+        # Set default model if not specified
+        if "model" not in job_input:
+            job_input["model"] = os.getenv("SERVED_MODEL_NAME", "glm-4.7-flash")
+
+        response = requests.post(openai_url, headers=headers, json=job_input)
+
+        if job_input.get("stream", False):
+            for chunk in response.iter_lines():
+                if chunk:
+                    yield chunk.decode("utf-8")
+        else:
+            for chunk in response.iter_lines():
+                if chunk:
+                    yield chunk.decode("utf-8")
+
+    # Case 3: Direct /generate endpoint (SGLang native)
+    else:
+        generate_url = f"{engine.base_url}/generate"
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(generate_url, json=job_input, headers=headers)
+
+        if response.status_code == 200:
+            yield response.json()
+        else:
+            yield {
+                "error": f"Generate request failed with status code {response.status_code}",
+                "details": response.text,
             }
-            # Optional parameters
-            if "tools" in job_input:
-                payload["tools"] = job_input["tools"]
-            if "tool_choice" in job_input:
-                payload["tool_choice"] = job_input["tool_choice"]
-
-            response = requests.post(
-                f"{SGLANG_URL}/v1/chat/completions",
-                json=payload,
-                timeout=300
-            )
-            return response.json()
-
-        # Direct generate
-        if "text" in job_input or "prompt" in job_input:
-            text = job_input.get("text") or job_input.get("prompt")
-            payload = {
-                "text": text,
-                "sampling_params": job_input.get("sampling_params", {
-                    "max_new_tokens": 2048,
-                    "temperature": 1.0,
-                })
-            }
-            response = requests.post(
-                f"{SGLANG_URL}/generate",
-                json=payload,
-                timeout=300
-            )
-            return response.json()
-
-        return {"error": "Invalid input. Provide 'messages', 'text', 'prompt', or 'openai_route'."}
-
-    except requests.exceptions.Timeout:
-        return {"error": "Request timeout. Try reducing max_tokens or simplifying the request."}
-    except requests.exceptions.ConnectionError:
-        return {"error": "SGLang server not responding. Container may still be initializing."}
-    except Exception as e:
-        return {"error": f"Handler error: {str(e)}"}
 
 
-if __name__ == "__main__":
-    runpod.serverless.start({"handler": handler})
+runpod.serverless.start(
+    {
+        "handler": async_handler,
+        "concurrency_modifier": get_max_concurrency,
+        "return_aggregate_stream": True,
+    }
+)
