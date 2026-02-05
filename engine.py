@@ -1,6 +1,6 @@
 """
 SGLang Engine for GLM-4.7-Flash
-Based on runpod-workers/worker-sglang
+Based on runpod-workers/worker-sglang (2025-11-24)
 """
 import subprocess
 import time
@@ -30,21 +30,38 @@ class SGlangEngine:
             "--port", str(self.port),
         ]
 
-        # Model and basic options
+        # All options from official worker + GLM-4.7 speculative decoding
         options = {
             "MODEL_NAME": "--model-path",
             "TOKENIZER_PATH": "--tokenizer-path",
+            "TOKENIZER_MODE": "--tokenizer-mode",
+            "LOAD_FORMAT": "--load-format",
             "DTYPE": "--dtype",
+            "CONTEXT_LENGTH": "--context-length",
             "QUANTIZATION": "--quantization",
             "SERVED_MODEL_NAME": "--served-model-name",
             "CHAT_TEMPLATE": "--chat-template",
             "MEM_FRACTION_STATIC": "--mem-fraction-static",
+            "MAX_RUNNING_REQUESTS": "--max-running-requests",
             "MAX_TOTAL_TOKENS": "--max-total-tokens",
+            "CHUNKED_PREFILL_SIZE": "--chunked-prefill-size",
+            "MAX_PREFILL_TOKENS": "--max-prefill-tokens",
+            "SCHEDULE_POLICY": "--schedule-policy",
+            "SCHEDULE_CONSERVATIVENESS": "--schedule-conservativeness",
             "TENSOR_PARALLEL_SIZE": "--tensor-parallel-size",
-            "CONTEXT_LENGTH": "--context-length",
+            "STREAM_INTERVAL": "--stream-interval",
+            "RANDOM_SEED": "--random-seed",
+            "LOG_LEVEL": "--log-level",
+            "LOG_LEVEL_HTTP": "--log-level-http",
+            "API_KEY": "--api-key",
+            "FILE_STORAGE_PATH": "--file-storage-path",
+            "DATA_PARALLEL_SIZE": "--data-parallel-size",
+            "LOAD_BALANCE_METHOD": "--load-balance-method",
+            "ATTENTION_BACKEND": "--attention-backend",
+            "SAMPLING_BACKEND": "--sampling-backend",
             "TOOL_CALL_PARSER": "--tool-call-parser",
             "REASONING_PARSER": "--reasoning-parser",
-            # Speculative decoding
+            # GLM-4.7 speculative decoding
             "SPECULATIVE_ALGORITHM": "--speculative-algorithm",
             "SPECULATIVE_NUM_STEPS": "--speculative-num-steps",
             "SPECULATIVE_EAGLE_TOPK": "--speculative-eagle-topk",
@@ -53,9 +70,17 @@ class SGlangEngine:
 
         # Boolean flags
         boolean_flags = [
+            "SKIP_TOKENIZER_INIT",
             "TRUST_REMOTE_CODE",
+            "LOG_REQUESTS",
+            "SHOW_TIME_COST",
             "DISABLE_RADIX_CACHE",
             "DISABLE_CUDA_GRAPH",
+            "DISABLE_OUTLINES_DISK_CACHE",
+            "ENABLE_TORCH_COMPILE",
+            "ENABLE_P2P_CHECK",
+            "ENABLE_FLASHINFER_MLA",
+            "TRITON_ATTENTION_REDUCE_IN_FP32",
         ]
 
         # Add options from environment variables
