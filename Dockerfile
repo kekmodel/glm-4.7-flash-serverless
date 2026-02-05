@@ -17,6 +17,10 @@ CMD ["python3", "-m", "sglang.launch_server", \
      "--tp-size", "1", \
      "--tool-call-parser", "glm47", \
      "--reasoning-parser", "glm45", \
+     "--speculative-algorithm", "EAGLE", \
+     "--speculative-num-steps", "3", \
+     "--speculative-eagle-topk", "1", \
+     "--speculative-num-draft-tokens", "4", \
      "--mem-fraction-static", "0.9", \
      "--served-model-name", "glm-4.7-flash", \
      "--host", "0.0.0.0", \
