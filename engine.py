@@ -1,6 +1,6 @@
 """
 SGLang Engine for GLM-4.7-Flash
-Based on runpod-workers/worker-sglang (2025-11-24)
+Updated with latest SGLang options (2026-02)
 """
 import subprocess
 import time
@@ -30,17 +30,23 @@ class SGlangEngine:
             "--port", str(self.port),
         ]
 
-        # All options from official worker + GLM-4.7 speculative decoding
+        # All options - synced with latest SGLang
         options = {
+            # Model & Tokenizer
             "MODEL_NAME": "--model-path",
             "TOKENIZER_PATH": "--tokenizer-path",
             "TOKENIZER_MODE": "--tokenizer-mode",
             "LOAD_FORMAT": "--load-format",
             "DTYPE": "--dtype",
             "CONTEXT_LENGTH": "--context-length",
-            "QUANTIZATION": "--quantization",
             "SERVED_MODEL_NAME": "--served-model-name",
             "CHAT_TEMPLATE": "--chat-template",
+
+            # Quantization
+            "QUANTIZATION": "--quantization",
+            "KV_CACHE_DTYPE": "--kv-cache-dtype",
+
+            # Memory & Scheduling
             "MEM_FRACTION_STATIC": "--mem-fraction-static",
             "MAX_RUNNING_REQUESTS": "--max-running-requests",
             "MAX_TOTAL_TOKENS": "--max-total-tokens",
@@ -48,24 +54,48 @@ class SGlangEngine:
             "MAX_PREFILL_TOKENS": "--max-prefill-tokens",
             "SCHEDULE_POLICY": "--schedule-policy",
             "SCHEDULE_CONSERVATIVENESS": "--schedule-conservativeness",
+            "PAGE_SIZE": "--page-size",
+
+            # Parallelism
             "TENSOR_PARALLEL_SIZE": "--tensor-parallel-size",
-            "STREAM_INTERVAL": "--stream-interval",
-            "RANDOM_SEED": "--random-seed",
+            "DATA_PARALLEL_SIZE": "--data-parallel-size",
+            "PIPELINE_PARALLEL_SIZE": "--pipeline-parallel-size",
+            "LOAD_BALANCE_METHOD": "--load-balance-method",
+
+            # Attention Backends
+            "ATTENTION_BACKEND": "--attention-backend",
+            "DECODE_ATTENTION_BACKEND": "--decode-attention-backend",
+            "PREFILL_ATTENTION_BACKEND": "--prefill-attention-backend",
+            "SAMPLING_BACKEND": "--sampling-backend",
+
+            # Logging
             "LOG_LEVEL": "--log-level",
             "LOG_LEVEL_HTTP": "--log-level-http",
+            "STREAM_INTERVAL": "--stream-interval",
+            "RANDOM_SEED": "--random-seed",
+
+            # API & Storage
             "API_KEY": "--api-key",
             "FILE_STORAGE_PATH": "--file-storage-path",
-            "DATA_PARALLEL_SIZE": "--data-parallel-size",
-            "LOAD_BALANCE_METHOD": "--load-balance-method",
-            "ATTENTION_BACKEND": "--attention-backend",
-            "SAMPLING_BACKEND": "--sampling-backend",
+
+            # Tool Calling & Reasoning
             "TOOL_CALL_PARSER": "--tool-call-parser",
             "REASONING_PARSER": "--reasoning-parser",
-            # GLM-4.7 speculative decoding
+
+            # Speculative Decoding (EAGLE, etc.)
             "SPECULATIVE_ALGORITHM": "--speculative-algorithm",
+            "SPECULATIVE_DRAFT_MODEL_PATH": "--speculative-draft-model-path",
             "SPECULATIVE_NUM_STEPS": "--speculative-num-steps",
             "SPECULATIVE_EAGLE_TOPK": "--speculative-eagle-topk",
             "SPECULATIVE_NUM_DRAFT_TOKENS": "--speculative-num-draft-tokens",
+            "SPECULATIVE_ACCEPT_THRESHOLD_SINGLE": "--speculative-accept-threshold-single",
+            "SPECULATIVE_ACCEPT_THRESHOLD_ACC": "--speculative-accept-threshold-acc",
+            "SPECULATIVE_DRAFT_ATTENTION_BACKEND": "--speculative-draft-attention-backend",
+
+            # Hierarchical Cache
+            "HICACHE_RATIO": "--hicache-ratio",
+            "HICACHE_SIZE": "--hicache-size",
+            "HICACHE_WRITE_POLICY": "--hicache-write-policy",
         }
 
         # Boolean flags
@@ -77,9 +107,14 @@ class SGlangEngine:
             "DISABLE_RADIX_CACHE",
             "DISABLE_CUDA_GRAPH",
             "DISABLE_OUTLINES_DISK_CACHE",
+            "DISABLE_FLASHINFER_AUTOTUNE",
             "ENABLE_TORCH_COMPILE",
             "ENABLE_P2P_CHECK",
             "ENABLE_FLASHINFER_MLA",
+            "ENABLE_METRICS",
+            "ENABLE_HIERARCHICAL_CACHE",
+            "ENABLE_MULTI_LAYER_EAGLE",
+            "ENABLE_PIECEWISE_CUDA_GRAPH",
             "TRITON_ATTENTION_REDUCE_IN_FP32",
         ]
 
