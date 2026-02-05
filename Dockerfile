@@ -17,7 +17,7 @@ CMD ["python3", "-m", "sglang.launch_server", \
      "--tp-size", "1", \
      "--tool-call-parser", "glm47", \
      "--reasoning-parser", "glm45", \
-     "--mem-fraction-static", "0.8", \
+     "--mem-fraction-static", "0.9", \
      "--served-model-name", "glm-4.7-flash", \
      "--host", "0.0.0.0", \
      "--port", "8000"]
