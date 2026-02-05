@@ -1,0 +1,17 @@
+services:
+  sglang:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - huggingface-cache:/runpod-volume/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  huggingface-cache:
