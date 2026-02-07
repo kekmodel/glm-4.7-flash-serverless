@@ -27,32 +27,41 @@ Use `test_endpoint.ipynb` to test deployed RunPod endpoints. Requires `.env` wit
 - `RUNPOD_API_KEY` - RunPod API key
 - `ENDPOINT_ID` - RunPod endpoint ID
 
+Install dev dependencies first: `uv pip install -e ".[dev]"`
+
 ## Architecture
 
-- **Dockerfile**: Builds SGLang server image with GLM-4.7-Flash model and EAGLE speculative decoding
+- **handler.py**: RunPod serverless handler - routes requests to SGLang server (OpenAI route, chat completions, generate)
+- **engine.py**: SGLang server lifecycle management - builds CLI command from environment variables, starts/stops subprocess
+- **Dockerfile**: Builds SGLang image with GLM-4.7-Flash specific sglang/transformers versions
 - **docker-compose.yml**: Local GPU testing configuration
 - **test_endpoint.ipynb**: Integration tests for RunPod endpoint (health, models, chat, generate, tokenizer)
 
 ## SGLang Server Configuration
 
-The Dockerfile configures SGLang with:
+Default environment variables (set in Dockerfile):
 - Model: `zai-org/GLM-4.7-Flash`
 - Tool call parser: `glm47`
 - Reasoning parser: `glm45`
 - EAGLE speculative decoding (3 steps, topk=1, 4 draft tokens)
-- Memory fraction: 0.8
+- Memory fraction: 0.9
 - Served model name: `glm-4.7-flash`
+
+All SGLang options are configurable via environment variables. See `engine.py` OPTIONS dict for the full mapping.
 
 ## RunPod Request Format
 
-Requests go through RunPod's proxy using `/runsync`:
+Three request patterns are supported:
+
 ```json
-{
-  "input": {
-    "openai_route": "/v1/chat/completions",
-    "openai_input": { ... }
-  }
-}
+// 1. OpenAI route style
+{"input": {"openai_route": "/v1/chat/completions", "openai_input": { ... }}}
+
+// 2. Direct chat (messages format)
+{"input": {"messages": [{"role": "user", "content": "Hello"}]}}
+
+// 3. SGLang native /generate
+{"input": {"text": "Hello", "sampling_params": { ... }}}
 ```
 
 ## Key Dependencies (in Docker)
